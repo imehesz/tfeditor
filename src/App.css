@@ -33,9 +33,9 @@ button {
 }
 
 img {
-  max-width: 100%;
+  width: auto;
   height: auto;
-  display: block;
+  max-width: none;
 }
 .overlay {
   position: absolute;
@@ -53,10 +53,15 @@ g {
   pointer-events: all;
 }
 .coordinates-display {
-  margin-top: 20px;
+  width: 100%;
   color: white;
+  text-align: left;
+  font-family: monospace;
+  white-space: pre;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 5px;
 }
-
 .debug-info {
   color: white;
   text-align: left;

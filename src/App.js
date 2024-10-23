@@ -16,6 +16,15 @@ function App() {
     setSavedPolygons([]);
   };
 
+    const formatCoordinatesArray = () => {
+        const currentPolygon = currentCoordinates.map(coord => [coord.x, coord.y]);
+        const allPolygons = [...savedPolygons.map(poly => poly.map(coord => [coord.x, coord.y]))];
+        if (currentPolygon.length > 0) {
+            allPolygons.push(currentPolygon);
+        }
+        return JSON.stringify(allPolygons);
+    };
+
   const handleImageClick = (e) => {
     // Only add new point if we're not dragging
     if (!isDragging) {
@@ -169,28 +178,9 @@ function App() {
               ))}            </svg>
           </div>
         )}
-        <div className="coordinates-display">
-          Active Points: {currentCoordinates.length} | Saved Polygons: {savedPolygons.length}
-        </div>
-        <div className="debug-info">
-          <h3>Active Coordinates:</h3>
-          {currentCoordinates.map((coord, index) => (
-            <div key={index}>
-              Point {index + 1}: x={coord.x}, y={coord.y}
-            </div>
-          ))}
-          <h3>Saved Polygons:</h3>
-          {savedPolygons.map((polygon, polyIndex) => (
-            <div key={polyIndex}>
-              Polygon {polyIndex + 1}:
-              {polygon.map((coord, pointIndex) => (
-                <div key={pointIndex} style={{marginLeft: '20px'}}>
-                  Point {pointIndex + 1}: x={coord.x}, y={coord.y}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        <pre className="coordinates-display">
+          {formatCoordinatesArray()}
+        </pre>
       </header>
     </div>
   );
