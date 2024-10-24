@@ -10,20 +10,30 @@ function App() {
   const [dragIndex, setDragIndex] = useState(null);
   const imageContainerRef = useRef(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const imgParam = params.get('img');
+    if (imgParam) {
+      const decodedUrl = decodeURIComponent(imgParam);
+      setImageUrl(decodedUrl);
+      setDisplayUrl(decodedUrl);
+    }
+  }, []);
+
   const handleLoadImage = () => {
     setDisplayUrl(imageUrl);
     setCurrentCoordinates([]);
     setSavedPolygons([]);
   };
 
-    const formatCoordinatesArray = () => {
-        const currentPolygon = currentCoordinates.map(coord => [coord.x, coord.y]);
-        const allPolygons = [...savedPolygons.map(poly => poly.map(coord => [coord.x, coord.y]))];
-        if (currentPolygon.length > 0) {
-            allPolygons.push(currentPolygon);
-        }
-        return JSON.stringify(allPolygons);
-    };
+  const formatCoordinatesArray = () => {
+    const currentPolygon = currentCoordinates.map(coord => [coord.x, coord.y]);
+    const allPolygons = [...savedPolygons.map(poly => poly.map(coord => [coord.x, coord.y]))];
+    if (currentPolygon.length > 0) {
+      allPolygons.push(currentPolygon);
+    }
+    return JSON.stringify(allPolygons);
+  };
 
   const handleImageClick = (e) => {
     // Only add new point if we're not dragging
@@ -63,28 +73,29 @@ function App() {
     return coords.map(coord => `${coord.x},${coord.y}`).join(' ');
   };
 
-useEffect(() => {
-      const handleKeyPress = (e) => {
-          if (e.key === 'Enter' && currentCoordinates.length > 2) {
-              setSavedPolygons([...savedPolygons, currentCoordinates]);
-              setCurrentCoordinates([]);
-          }
-      };
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'Enter' && currentCoordinates.length > 2) {
+        setSavedPolygons([...savedPolygons, currentCoordinates]);
+        setCurrentCoordinates([]);
+      }
+    };
 
-      const handleKeyDown = (e) => {
-          if (e.key === 'Escape') {
-              setCurrentCoordinates([]);
-          }
-      };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setCurrentCoordinates([]);
+      }
+    };
 
-      window.addEventListener('keypress', handleKeyPress);
-      window.addEventListener('keydown', handleKeyDown);
-        
-      return () => {
-          window.removeEventListener('keypress', handleKeyPress);
-          window.removeEventListener('keydown', handleKeyDown);
-      };
+    window.addEventListener('keypress', handleKeyPress);
+    window.addEventListener('keydown', handleKeyDown);
+      
+    return () => {
+      window.removeEventListener('keypress', handleKeyPress);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [currentCoordinates, savedPolygons]);
+
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', stopDragging);
@@ -93,7 +104,9 @@ useEffect(() => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', stopDragging);
     };
-  }, [handleMouseMove, stopDragging]);  return (
+  }, [handleMouseMove, stopDragging]);
+
+  return (
     <div className="App">
       <header className="App-header">
         <h1>TF Editor</h1>
@@ -169,7 +182,7 @@ useEffect(() => {
                     stroke="#00ff9d"
                     strokeWidth="2"
                     onMouseDown={(e) => {
-                        startDragging(index, e)
+                      startDragging(index, e)
                     }}
                   />
                   <circle
@@ -178,11 +191,12 @@ useEffect(() => {
                     r="4"
                     fill="red"
                     onMouseDown={(e) => {
-                        startDragging(index, e)
+                      startDragging(index, e)
                     }}
                   />
                 </g>
-              ))}            </svg>
+              ))}
+            </svg>
           </div>
         )}
         <pre className="coordinates-display">
@@ -192,4 +206,5 @@ useEffect(() => {
     </div>
   );
 }
+
 export default App;
