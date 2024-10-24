@@ -38,7 +38,6 @@ function App() {
   const startDragging = useCallback((index, e) => {
     setIsDragging(true);
     setDragIndex(index);
-    console.log('Start dragging point:', index);
   }, []);
 
   const handleMouseMove = useCallback((e) => {
@@ -64,18 +63,28 @@ function App() {
     return coords.map(coord => `${coord.x},${coord.y}`).join(' ');
   };
 
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.key === 'Enter' && currentCoordinates.length > 2) {
-        setSavedPolygons([...savedPolygons, currentCoordinates]);
-        setCurrentCoordinates([]);
-      }
-    };
+useEffect(() => {
+      const handleKeyPress = (e) => {
+          if (e.key === 'Enter' && currentCoordinates.length > 2) {
+              setSavedPolygons([...savedPolygons, currentCoordinates]);
+              setCurrentCoordinates([]);
+          }
+      };
 
-    window.addEventListener('keypress', handleKeyPress);
-    return () => window.removeEventListener('keypress', handleKeyPress);
+      const handleKeyDown = (e) => {
+          if (e.key === 'Escape') {
+              setCurrentCoordinates([]);
+          }
+      };
+
+      window.addEventListener('keypress', handleKeyPress);
+      window.addEventListener('keydown', handleKeyDown);
+        
+      return () => {
+          window.removeEventListener('keypress', handleKeyPress);
+          window.removeEventListener('keydown', handleKeyDown);
+      };
   }, [currentCoordinates, savedPolygons]);
-
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', stopDragging);
@@ -160,7 +169,6 @@ function App() {
                     stroke="#00ff9d"
                     strokeWidth="2"
                     onMouseDown={(e) => {
-                        console.log('Mouse down on outer circle:', index)
                         startDragging(index, e)
                     }}
                   />
@@ -170,7 +178,6 @@ function App() {
                     r="4"
                     fill="red"
                     onMouseDown={(e) => {
-                        console.log('Mouse down on inner circle:', index)
                         startDragging(index, e)
                     }}
                   />
