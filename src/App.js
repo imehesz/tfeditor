@@ -6,6 +6,9 @@ function App() {
   const [displayUrl, setDisplayUrl] = useState('');
   const [currentCoordinates, setCurrentCoordinates] = useState([]);
   const [savedPolygons, setSavedPolygons] = useState([]);
+  const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState(null);
+  const [draggedPolygonIndex, setDraggedPolygonIndex] = useState(null);
+  const [dragOverPolygonIndex, setDragOverPolygonIndex] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [zoom, setZoom] = useState(100);
@@ -26,6 +29,9 @@ function App() {
     setDisplayUrl(imageUrl);
     setCurrentCoordinates([]);
     setSavedPolygons([]);
+    setHoveredPolygonIndex(null);
+    setDraggedPolygonIndex(null);
+    setDragOverPolygonIndex(null);
     setImgDimensions({ width: 0, height: 0 });
   };
 
@@ -38,7 +44,8 @@ function App() {
 
   const formatCoordinatesArray = () => {
     const currentPolygon = currentCoordinates.map(coord => [coord.x, coord.y]);
-    const allPolygons = [...savedPolygons.map(poly => poly.map(coord => [coord.x, coord.y]))];
+    const orderedSavedPolygons = savedPolygons.map(poly => poly.map(coord => [coord.x, coord.y]));
+    const allPolygons = [...orderedSavedPolygons];
     if (currentPolygon.length > 0) {
       allPolygons.push(currentPolygon);
     }
@@ -85,6 +92,58 @@ function App() {
 
   const createPolygonPoints = (coords) => {
     return coords.map(coord => `${coord.x},${coord.y}`).join(' ');
+  };
+
+  const handleDeletePolygon = (polygonIndex) => {
+    const shouldDelete = window.confirm(`Are you sure you want to delete polygon #${polygonIndex + 1}?`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    setSavedPolygons(polygons => polygons.filter((_, index) => index !== polygonIndex));
+    setHoveredPolygonIndex(currentHovered => {
+      if (currentHovered === null) return null;
+      if (currentHovered === polygonIndex) return null;
+      if (currentHovered > polygonIndex) return currentHovered - 1;
+      return currentHovered;
+    });
+  };
+
+  const handlePolygonDragStart = (polygonIndex, e) => {
+    setDraggedPolygonIndex(polygonIndex);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(polygonIndex));
+  };
+
+  const handlePolygonDragOver = (polygonIndex, e) => {
+    e.preventDefault();
+    if (draggedPolygonIndex !== null && draggedPolygonIndex !== polygonIndex) {
+      setDragOverPolygonIndex(polygonIndex);
+    }
+  };
+
+  const handlePolygonDrop = (dropIndex, e) => {
+    e.preventDefault();
+    if (draggedPolygonIndex === null || draggedPolygonIndex === dropIndex) {
+      setDraggedPolygonIndex(null);
+      setDragOverPolygonIndex(null);
+      return;
+    }
+
+    setSavedPolygons(polygons => {
+      const reordered = [...polygons];
+      const [movedPolygon] = reordered.splice(draggedPolygonIndex, 1);
+      reordered.splice(dropIndex, 0, movedPolygon);
+      return reordered;
+    });
+    setHoveredPolygonIndex(dropIndex);
+    setDraggedPolygonIndex(null);
+    setDragOverPolygonIndex(null);
+  };
+
+  const handlePolygonDragEnd = () => {
+    setDraggedPolygonIndex(null);
+    setDragOverPolygonIndex(null);
   };
 
   useEffect(() => {
@@ -169,8 +228,8 @@ function App() {
                 <polygon
                   key={`saved-${index}`}
                   points={createPolygonPoints(polygon)}
-                  fill="rgba(255, 255, 0, 0.2)"
-                  stroke="yellow"
+                  fill={hoveredPolygonIndex === index ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 255, 0, 0.2)'}
+                  stroke={hoveredPolygonIndex === index ? '#ff3333' : 'yellow'}
                   strokeWidth="2"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -237,6 +296,48 @@ function App() {
         <pre className="coordinates-display">
           {formatCoordinatesArray()}
         </pre>
+        <div className="polygon-list">
+          <h3>Saved polygons</h3>
+          {savedPolygons.length === 0 ? (
+            <p className="polygon-empty">No saved polygons yet.</p>
+          ) : (
+            <ul>
+              {savedPolygons.map((_, index) => (
+                <li
+                  key={`polygon-list-${index}`}
+                  onMouseEnter={() => setHoveredPolygonIndex(index)}
+                  onMouseLeave={() => setHoveredPolygonIndex(null)}
+                  onDragOver={(e) => handlePolygonDragOver(index, e)}
+                  onDrop={(e) => handlePolygonDrop(index, e)}
+                  className={dragOverPolygonIndex === index ? 'polygon-drop-target' : ''}
+                >
+                  <span>{`#${index + 1}`}</span>
+                  <div className="polygon-actions">
+                    <button
+                      type="button"
+                      className="move-polygon-button"
+                      draggable
+                      onDragStart={(e) => handlePolygonDragStart(index, e)}
+                      onDragEnd={handlePolygonDragEnd}
+                      aria-label={`Move polygon #${index + 1}`}
+                      title="Drag to reorder"
+                    >
+                      ::
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-polygon-button"
+                      onClick={() => handleDeletePolygon(index)}
+                      aria-label={`Delete polygon #${index + 1}`}
+                    >
+                      x
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </header>
     </div>
   );
