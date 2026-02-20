@@ -8,6 +8,8 @@ function App() {
   const [savedPolygons, setSavedPolygons] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
+  const [zoom, setZoom] = useState(100);
+  const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
   const imageContainerRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +26,14 @@ function App() {
     setDisplayUrl(imageUrl);
     setCurrentCoordinates([]);
     setSavedPolygons([]);
+    setImgDimensions({ width: 0, height: 0 });
+  };
+
+  const handleImageLoad = (e) => {
+    setImgDimensions({
+      width: e.target.naturalWidth,
+      height: e.target.naturalHeight
+    });
   };
 
   const formatCoordinatesArray = () => {
@@ -37,10 +47,12 @@ function App() {
 
   const handleImageClick = (e) => {
     // Only add new point if we're not dragging
-    if (!isDragging) {
+    if (!isDragging && imgDimensions.width > 0) {
       const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const scaleX = imgDimensions.width / rect.width;
+      const scaleY = imgDimensions.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
       setCurrentCoordinates([...currentCoordinates, { x: Math.round(x), y: Math.round(y) }]);
     }
   };
@@ -51,18 +63,20 @@ function App() {
   }, []);
 
   const handleMouseMove = useCallback((e) => {
-    if (isDragging && dragIndex !== null) {
+    if (isDragging && dragIndex !== null && imgDimensions.width > 0) {
       const rect = imageContainerRef.current.getBoundingClientRect();
+      const scaleX = imgDimensions.width / rect.width;
+      const scaleY = imgDimensions.height / rect.height;
       const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
       const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
       
       setCurrentCoordinates(coords => {
         const newCoords = [...coords];
-        newCoords[dragIndex] = { x: Math.round(x), y: Math.round(y) };
+        newCoords[dragIndex] = { x: Math.round(x * scaleX), y: Math.round(y * scaleY) };
         return newCoords;
       });
     }
-  }, [isDragging, dragIndex]);
+  }, [isDragging, dragIndex, imgDimensions]);
 
   const stopDragging = useCallback(() => {
     setIsDragging(false);
@@ -118,6 +132,16 @@ function App() {
             placeholder="Enter image URL"
           />
           <button onClick={handleLoadImage}>Load Image</button>
+          <select 
+            value={zoom} 
+            onChange={(e) => setZoom(Number(e.target.value))} 
+            style={{ marginLeft: '10px', padding: '5px' }}
+          >
+            <option value={100}>100%</option>
+            <option value={75}>75%</option>
+            <option value={50}>50%</option>
+            <option value={25}>25%</option>
+          </select>
         </div>
         {displayUrl && (
           <div 
@@ -131,9 +155,16 @@ function App() {
               src={displayUrl} 
               alt="Loaded content" 
               onClick={handleImageClick}
-              style={{ cursor: isDragging ? 'grabbing' : 'crosshair' }}
+              onLoad={handleImageLoad}
+              style={{ 
+                cursor: isDragging ? 'grabbing' : 'crosshair',
+                width: imgDimensions.width ? `${imgDimensions.width * (zoom / 100)}px` : 'auto'
+              }}
             />
-            <svg className="overlay">
+            <svg 
+              className="overlay"
+              viewBox={imgDimensions.width ? `0 0 ${imgDimensions.width} ${imgDimensions.height}` : undefined}
+            >
               {savedPolygons.map((polygon, index) => (
                 <polygon
                   key={`saved-${index}`}
@@ -141,6 +172,7 @@ function App() {
                   fill="rgba(255, 255, 0, 0.2)"
                   stroke="yellow"
                   strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
                 />
               ))}
               
@@ -156,6 +188,7 @@ function App() {
                     y2={nextCoord.y}
                     stroke="#00ff9d"
                     strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
                   />
                 );
               })}
@@ -166,6 +199,7 @@ function App() {
                   fill="rgba(0, 255, 157, 0.2)"
                   stroke="#00ff9d"
                   strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
                 />
               )}
 
@@ -177,10 +211,11 @@ function App() {
                   <circle
                     cx={coord.x}
                     cy={coord.y}
-                    r="8"
+                    r={8 / (zoom / 100)}
                     fill="transparent"
                     stroke="#00ff9d"
                     strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
                     onMouseDown={(e) => {
                       startDragging(index, e)
                     }}
@@ -188,7 +223,7 @@ function App() {
                   <circle
                     cx={coord.x}
                     cy={coord.y}
-                    r="4"
+                    r={4 / (zoom / 100)}
                     fill="red"
                     onMouseDown={(e) => {
                       startDragging(index, e)
